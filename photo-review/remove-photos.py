@@ -1,5 +1,5 @@
 """Apply an explicit photo-only plan through Contacts+. Dry-run by default."""
-import argparse,copy,datetime,json,subprocess
+import argparse,copy,datetime,json,subprocess,os,tempfile
 from pathlib import Path
 from urllib.request import Request,urlopen
 ROOT=Path(__file__).resolve().parent.parent
@@ -14,6 +14,29 @@ def replacement(current,plan):
     if set(urls)!=set(remove)|set(keep) or not keep:raise ValueError('Photo set differs or no photo would remain')
     data=copy.deepcopy(current['contactData']);data['photos']=[p for p in photos if p['value'] not in remove]
     return data
+
+def publish_verified_removal(catalog_path, after, plan):
+    """Publish only confirmed absences; keep downloaded history on disk."""
+    actual={p['value'] for p in after['contactData'].get('photos',[])}
+    if after['contactId']!=plan['contactId'] or actual!=set(plan['keepUrls']) or actual&set(plan['removeUrls']):
+        raise ValueError('Removal has not been verified')
+    catalog=json.loads(catalog_path.read_text())
+    checked=datetime.datetime.now(datetime.timezone.utc).isoformat()
+    for contact in catalog['contacts']:
+        if contact.get('liveContactId')!=after['contactId']:continue
+        contact['livePhotoCount']=len(actual);contact['checkedAt']=checked
+        for photo in contact['candidates']:
+            url=photo.get('sourceUrl')
+            if url in plan['removeUrls']:
+                photo['presence']='historical';photo['removalConfirmedAt']=checked
+            elif url in actual:
+                photo['presence']='current';photo.pop('removalConfirmedAt',None)
+    fd,tmp=tempfile.mkstemp(dir=catalog_path.parent,prefix='.catalog-')
+    try:
+        with os.fdopen(fd,'w') as f:json.dump(catalog,f,indent=2)
+        os.replace(tmp,catalog_path)
+    finally:
+        if os.path.exists(tmp):os.unlink(tmp)
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--plan',required=True);parser.add_argument('--apply',action='store_true');args=parser.parse_args()
@@ -47,4 +70,5 @@ def main():
     report={'status':'verified' if verified else 'not_verified','removedCount':len(plan['removeUrls']) if verified else None,'remainingPhotoCount':len(actual),'otherFieldsUnchanged':before_other==after_other,'metadataUnchanged':current.get('contactMetadata')==after.get('contactMetadata'),'requestError':error}
     (backup/'result.json').write_text(json.dumps(report,indent=2));print(json.dumps(report))
     if not verified:raise SystemExit(1)
+    publish_verified_removal(ROOT/'photo-review/public/data.json',after,plan)
 if __name__=='__main__':main()

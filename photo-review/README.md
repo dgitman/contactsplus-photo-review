@@ -7,3 +7,5 @@ The interface is a compact native HTML/CSS/JavaScript frontend served by Python'
 Use `prepare.py` to import local candidates, then `refresh-presence.py` to reconcile them with current source photos. Preparation rebuilds the catalog from the original snapshot; reconcile again afterward before reviewing source removals. Neither operation deletes source data.
 
 A separate supervised `remove-photos.py` CLI can apply an explicitly reviewed plan after write authorization. See the repository README for safeguards and usage. The browser does not invoke it. Source presence must use full `contacts.get` records; search results alone can omit photos.
+
+After a successful removal readback, the CLI atomically publishes the confirmed result to the local catalog. The browser checks for catalog changes every three seconds, hides confirmed removals, and clears their pending decisions. Downloaded originals remain on disk. Failed or uncertain removals are not hidden. Reload an already-open older version once to enable this behavior.

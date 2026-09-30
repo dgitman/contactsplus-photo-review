@@ -25,6 +25,7 @@ for c in catalog['contacts']:
  current=records[0];urls={p['value'] for p in current['contactData'].get('photos',[]) if p.get('value')}
  c['liveContactId']=current['contactId'];c['livePhotoCount']=len(urls);c['checkedAt']=datetime.datetime.now(datetime.timezone.utc).isoformat()
  for p in c['candidates']:
+  if p.get('sourceUrl') in urls:p.pop('removalConfirmedAt',None)
   p['presence']='current' if p.get('sourceUrl') in urls else ('historical' if p.get('sourceUrl') else 'unverified')
  for url in sorted(urls-{p.get('sourceUrl') for p in c['candidates']}):
   if urlparse(url).scheme!='https' or urlparse(url).hostname!='img.contactsplus.com':continue
