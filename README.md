@@ -41,3 +41,7 @@ node tests/test_review_state.cjs
 Tests cover source identity, stale plans, primary selection, preserving other fields, protected contacts, single-use previews, verified catalog updates, and operation-state transitions. Live removals and source reads have been verified separately. Tests do not change real contacts.
 
 This remains a private, locally run tool. There is no SaaS deployment, public registration, multi-user account system, or scheduled sync.
+
+## Separate sync repository
+
+The disabled Apple Contacts sync pilot now lives in [contactsplus-photo-sync](https://github.com/dgitman/contactsplus-photo-sync). This review app remains independent and writes only to Contacts+. Its existing local checkout remains at `~/Developer/dgitman/contacts` so the running app and private configuration keep their paths.
