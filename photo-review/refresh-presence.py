@@ -17,7 +17,12 @@ for c in catalog['contacts']:
  with urlopen(req,timeout=30) as r:data=json.load(r)
  matches=[x for x in data.get('contacts',[]) if any(e.get('value','').lower()==q for e in x.get('contactData',{}).get('emails',[]))]
  if len(matches)!=1 or data.get('cursor'):raise ValueError('Ambiguous source match')
- current=matches[0];urls={p['value'] for p in current['contactData'].get('photos',[]) if p.get('value')}
+ source_id=matches[0]['contactId']
+ req=Request('https://api.contactsplus.com/api/v1/contacts.get',data=json.dumps({'contactIds':[source_id]}).encode(),headers={'Content-Type':'application/json','Authorization':'Bearer '+token})
+ with urlopen(req,timeout=30) as r:full=json.load(r)
+ records=full.get('contacts',[])
+ if len(records)!=1 or records[0]['contactId']!=source_id:raise ValueError('Full source match failed')
+ current=records[0];urls={p['value'] for p in current['contactData'].get('photos',[]) if p.get('value')}
  c['liveContactId']=current['contactId'];c['livePhotoCount']=len(urls);c['checkedAt']=datetime.datetime.now(datetime.timezone.utc).isoformat()
  for p in c['candidates']:
   p['presence']='current' if p.get('sourceUrl') in urls else ('historical' if p.get('sourceUrl') else 'unverified')

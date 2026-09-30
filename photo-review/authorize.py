@@ -1,5 +1,5 @@
 """One-time loopback OAuth setup; secrets stay in memory and 1Password."""
-import json, secrets, subprocess, time
+import json, secrets, subprocess, time, argparse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlencode, urlparse, parse_qs
 from urllib.request import Request, urlopen
@@ -8,11 +8,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 CONFIG = json.loads((ROOT.parent/'config.local.json').read_text())
 REDIRECT = 'http://127.0.0.1:8765/oauth/callback'
+parser=argparse.ArgumentParser()
+parser.add_argument('--write',action='store_true',help='Request contact write access for reviewed photo removals')
+args=parser.parse_args()
+SCOPE='contacts.read,contacts.write' if args.write else 'contacts.read'
 state = secrets.token_urlsafe(32)
 item = json.loads(subprocess.check_output(['op','item','get',CONFIG['client_item'],'--format','json']))
 fields = {f.get('label'):f.get('value') for f in item['fields']}
 client_id, client_secret = fields['Client ID'], fields['Client Secret']
-auth_url = 'https://app.contactsplus.com/oauth/authorize?' + urlencode(dict(client_id=client_id,redirect_uri=REDIRECT,scope='contacts.read',state=state))
+auth_url = 'https://app.contactsplus.com/oauth/authorize?' + urlencode(dict(client_id=client_id,redirect_uri=REDIRECT,scope=SCOPE,state=state))
 finished = False
 
 def status(value):
@@ -41,14 +45,14 @@ class Handler(BaseHTTPRequestHandler):
             req=Request('https://api.contactsplus.com/v3/oauth.exchangeAuthCode',data=form,headers={'Content-Type':'application/x-www-form-urlencoded'})
             with urlopen(req,timeout=30) as r: tokens=json.load(r)
             if not tokens.get('access_token') or not tokens.get('refresh_token'):raise ValueError('Missing tokens')
-            record={'title':'Contacts+ Photo Review OAuth','category':'API_CREDENTIAL','vault':{'id':item['vault']['id']},'fields':[{'id':'credential','type':'CONCEALED','label':'credential','value':tokens['access_token']},{'id':'refresh_token','type':'CONCEALED','label':'refresh_token','value':tokens['refresh_token']},{'id':'client_item','type':'STRING','label':'client_item','value':item['id']},{'id':'redirect_uri','type':'STRING','label':'redirect_uri','value':REDIRECT},{'id':'scope','type':'STRING','label':'scope','value':tokens.get('scope','contacts.read')}]}
+            record={'title':'Contacts+ Photo Review OAuth'+(' Write' if args.write else ''),'category':'API_CREDENTIAL','vault':{'id':item['vault']['id']},'fields':[{'id':'credential','type':'CONCEALED','label':'credential','value':tokens['access_token']},{'id':'refresh_token','type':'CONCEALED','label':'refresh_token','value':tokens['refresh_token']},{'id':'client_item','type':'STRING','label':'client_item','value':item['id']},{'id':'redirect_uri','type':'STRING','label':'redirect_uri','value':REDIRECT},{'id':'scope','type':'STRING','label':'scope','value':tokens.get('scope',SCOPE)}]}
             result=subprocess.run(['op','item','create','--format','json'],input=json.dumps(record),text=True,capture_output=True,timeout=120)
             if result.returncode:raise ValueError('Secure storage failed')
             saved=json.loads(result.stdout)
             check=Request('https://api.contactsplus.com/api/v1/contacts.scroll',data=b'{"size":1}',headers={'Content-Type':'application/json','Authorization':'Bearer '+tokens['access_token']})
             with urlopen(check,timeout=30) as r: data=json.load(r)
-            status({'status':'authorized','credentialItemId':saved['id'],'scope':tokens.get('scope','contacts.read'),'readVerified':isinstance(data.get('contacts'),list)})
-            self.page('Connected. Read-only contact access is authorized and the credentials are saved in 1Password. No contacts were changed. You can close this tab.')
+            status({'status':'authorized','credentialItemId':saved['id'],'scope':tokens.get('scope',SCOPE),'readVerified':isinstance(data.get('contacts'),list)})
+            self.page('Connected. The requested access is authorized and credentials are saved in 1Password. No contacts were changed. You can close this tab.')
         except Exception as e:
             status({'status':'failed','stage':'exchange_store_or_verify','errorType':type(e).__name__})
             self.page('Setup did not finish. Return to Codex for the next step. No contacts were changed.',500)
