@@ -74,7 +74,6 @@ class Handler(SimpleHTTPRequestHandler):
    if not isinstance(decisions,dict):raise ValueError()
    if self.path in {'/preview','/apply'}:return self.photo_action(decisions)
    catalog={c['key']:c for c in json.loads((PUBLIC/'data.json').read_text())['contacts']}
-   if not isinstance(decisions,dict):raise ValueError()
    for k,d in decisions.items():
     if k not in catalog or set(d)-{'choice','removals','reviewedEtag','reviewedAppliedAt'}:raise ValueError()
     for field in ('reviewedEtag','reviewedAppliedAt'):

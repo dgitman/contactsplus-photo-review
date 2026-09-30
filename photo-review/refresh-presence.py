@@ -25,11 +25,13 @@ def reconcile(contact,current,download):
     full=name.get('fullName') or ' '.join(filter(None,[name.get('givenName'),name.get('familyName')]))
     if full:contact['fullName']=full
     contact.update(liveContactId=current['contactId'],liveEtag=current['etag'],livePhotoCount=len(urls),checkedAt=datetime.datetime.now(datetime.timezone.utc).isoformat())
+    by_url={}
     for p in contact['candidates']:
+        by_url.setdefault(p.get('sourceUrl'),p)
         if p.get('sourceUrl') in urls:p.pop('removalConfirmedAt',None)
         p['presence']='current' if p.get('sourceUrl') in urls else ('historical' if p.get('sourceUrl') else 'unverified')
     for url in sorted(urls):
-        existing=next((p for p in contact['candidates'] if p.get('sourceUrl')==url),None)
+        existing=by_url.get(url)
         if existing and (ROOT/'public'/existing['src'].lstrip('/')).is_file():continue
         candidate=download(url,current['contactId'])
         if existing:
@@ -38,7 +40,8 @@ def reconcile(contact,current,download):
         else:contact['candidates'].append(candidate)
 
 def download(url,contact_id):
-    if urlparse(url).scheme!='https' or urlparse(url).hostname!='img.contactsplus.com':raise ValueError('Unsupported photo host')
+    parsed=urlparse(url)
+    if parsed.scheme!='https' or parsed.hostname!='img.contactsplus.com':raise ValueError('Unsupported photo host')
     cid=hashlib.sha256(url.encode()).hexdigest()[:16]
     originals=ROOT/'private-originals';originals.mkdir(exist_ok=True)
     original=originals/cid;out=ROOT/'public/images'/f'{cid}.png';out.parent.mkdir(exist_ok=True)

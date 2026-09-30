@@ -15,6 +15,8 @@ class CatalogTests(unittest.TestCase):
   old={'contacts':[{'key':'example','liveContactId':'id','candidates':[{'key':'photo'}]}]}
   result=configured_catalog({'contacts':[{'key':'example','contactId':'id'}]},old)
   self.assertEqual(result['contacts'][0]['candidates'],[{'key':'photo'}])
+  result['contacts'][0]['candidates'][0]['key']='changed'
+  self.assertEqual(old['contacts'][0]['candidates'],[{'key':'photo'}], 'Review cache changes must not mutate the input catalog')
  def test_changed_source_does_not_reuse_another_persons_photos(self):
   old={'contacts':[{'key':'example','liveContactId':'old','candidates':[{'key':'photo'}]}]}
   result=configured_catalog({'contacts':[{'key':'example','contactId':'new'}]},old)

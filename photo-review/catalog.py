@@ -1,10 +1,10 @@
 """Initialize the review cache from a configured Contacts+ contact list."""
 import copy,json,os,tempfile
-from pathlib import Path
 
 def configured_catalog(config,existing=None):
-    catalog=copy.deepcopy(existing or {'contacts':[]})
-    previous={c['key']:c for c in catalog['contacts']}
+    existing=existing or {'contacts':[]}
+    catalog=copy.deepcopy({k:v for k,v in existing.items() if k!='contacts'})
+    previous={c['key']:c for c in existing['contacts']}
     contacts=[];seen=set()
     for entry in config.get('contacts',[]):
         key=entry['key']
