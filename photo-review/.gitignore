@@ -1,0 +1,8 @@
+choices.json
+authorization-status.json
+public/data.json
+public/images/
+design/*.jpg
+__pycache__/
+
+private-originals/

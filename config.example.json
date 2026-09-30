@@ -1,0 +1,9 @@
+{
+  "client_item": "YOUR_1PASSWORD_CLIENT_ITEM_ID",
+  "oauth_item": "YOUR_1PASSWORD_OAUTH_ITEM_ID",
+  "snapshot": "YYYY-MM-DD",
+  "contacts": [
+    {"key": "example", "name": "Example", "fullName": "Example Contact", "email": "person@example.com", "protected": false}
+  ],
+  "extra_candidates": []
+}

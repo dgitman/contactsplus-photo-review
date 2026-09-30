@@ -1,0 +1,22 @@
+# Personal data, backups, credentials, and machine-specific state
+outputs/
+config.local.json
+.env
+.env.*
+!.env.example
+photo-review/choices.json
+photo-review/authorization-status.json
+photo-review/public/data.json
+photo-review/public/images/
+photo-review/private-originals/
+photo-review/design/
+contact-photo-sync/*-test.json
+*.abcddb*
+*.vcf
+*.log
+# Generated files
+__pycache__/
+*.pyc
+*.app/
+contact-photo-sync/photo-sync
+.DS_Store
