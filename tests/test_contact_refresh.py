@@ -1,6 +1,7 @@
-import importlib.util,unittest
+import importlib.util,unittest,sys
 from pathlib import Path
 from unittest.mock import patch
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'photo-review'))
 spec=importlib.util.spec_from_file_location('refresh',Path(__file__).resolve().parents[1]/'photo-review/refresh-presence.py')
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 class RefreshTests(unittest.TestCase):

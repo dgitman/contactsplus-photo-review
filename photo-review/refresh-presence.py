@@ -1,4 +1,5 @@
 """Fetch full Contacts+ photo lists and cache previews for the local review UI."""
+from catalog import ensure_catalog
 import datetime,hashlib,json,os,re,subprocess,tempfile
 from urllib.parse import urlparse
 from pathlib import Path
@@ -51,7 +52,7 @@ def download(url,contact_id):
 
 def main():
     config=json.loads((ROOT.parent/'config.local.json').read_text())
-    path=ROOT/'public/data.json';catalog=json.loads(path.read_text())
+    path=ROOT/'public/data.json';catalog=ensure_catalog(ROOT)
     item=json.loads(subprocess.check_output(['op','item','get',config['oauth_item'],'--format','json'],timeout=90))
     token=next(f['value'] for f in item['fields'] if f.get('id')=='credential')
     def api(method,data):
@@ -60,8 +61,8 @@ def main():
     queries={c['key']:c['email'] for c in config['contacts'] if c.get('email')}
     count=0
     for contact in catalog['contacts']:
-        if contact.get('protected') or contact['key'] not in queries:continue
-        reconcile(contact,fetch_contact(contact,queries[contact['key']],api),download);count+=1
+        if not contact.get('liveContactId') and contact['key'] not in queries:continue
+        reconcile(contact,fetch_contact(contact,queries.get(contact['key'],''),api),download);count+=1
     catalog['sourceUpdatedAt']=datetime.datetime.now(datetime.timezone.utc).isoformat()
     fd,tmp=tempfile.mkstemp(dir=path.parent,prefix='.catalog-')
     try:

@@ -1,6 +1,7 @@
 """Local-only review UI. Reviewed photo changes require a separate preview and apply action."""
 import json,os,tempfile,subprocess,sys,threading,secrets,time
 from photo_plan import build_plan
+from catalog import ensure_catalog
 from http.server import HTTPServer,SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -75,7 +76,9 @@ class Handler(SimpleHTTPRequestHandler):
    catalog={c['key']:c for c in json.loads((PUBLIC/'data.json').read_text())['contacts']}
    if not isinstance(decisions,dict):raise ValueError()
    for k,d in decisions.items():
-    if k not in catalog or set(d)-{'choice','removals'}:raise ValueError()
+    if k not in catalog or set(d)-{'choice','removals','reviewedEtag','reviewedAppliedAt'}:raise ValueError()
+    for field in ('reviewedEtag','reviewedAppliedAt'):
+     if d.get(field) is not None and not isinstance(d[field],str):raise ValueError()
     ids={p['key'] for p in catalog[k]['candidates']}
     if d.get('choice') not in ids|{'keep',None}:raise ValueError()
     if not isinstance(d.get('removals',[]),list) or not set(d.get('removals',[]))<=ids:raise ValueError()
@@ -110,5 +113,7 @@ class Handler(SimpleHTTPRequestHandler):
    return self.send_json(dict(APPLY_STATE),202)
 
 if __name__=='__main__':
+ try:ensure_catalog(ROOT)
+ except ValueError as e:raise SystemExit(str(e))
  print('Photo review: http://127.0.0.1:8766',flush=True)
  HTTPServer(('127.0.0.1',8766),Handler).serve_forever()
