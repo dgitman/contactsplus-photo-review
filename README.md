@@ -36,7 +36,7 @@ Private configuration, original photos, previews, contact snapshots, backup data
 
 ## Validation
 
-Python modules compile; AppleScript compiles without executing a contact write. Browser verification covered selection/reload persistence, conflict clearing, photo enlargement, search, JSON export, historical-photo removal disabling, and pending-removal persistence. Mobile layout was checked at 390px with no page overflow. The working photo-save pilot was tested separately before this repository was created; no contact mutation is part of repository validation.
+Python modules compile; AppleScript compiles without executing a contact write. Browser verification covered selection/reload persistence, conflict clearing, photo enlargement, search, historical-photo removal disabling, and pending-removal persistence. Mobile layout was checked at 390px with no page overflow. The working photo-save pilot was tested separately before this repository was created; no contact mutation is part of repository validation.
 
 ## Supervised source-photo removal
 
