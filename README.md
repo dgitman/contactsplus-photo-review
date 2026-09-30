@@ -44,4 +44,4 @@ This remains a private, locally run tool. There is no SaaS deployment, public re
 
 ## Separate sync repository
 
-The disabled Apple Contacts sync pilot now lives in [contactsplus-photo-sync](https://github.com/dgitman/contactsplus-photo-sync). This review app remains independent and writes only to Contacts+. Its existing local checkout remains at `~/Developer/dgitman/contacts` so the running app and private configuration keep their paths.
+The disabled Apple Contacts sync pilot now lives in [contactsplus-photo-sync](https://github.com/dgitman/contactsplus-photo-sync). This review app remains independent and writes only to Contacts+. Local checkouts are `~/Developer/dgitman/contactsplus-photo-review` and `~/Developer/dgitman/contactsplus-photo-sync`. The review app runs from its own directory.
