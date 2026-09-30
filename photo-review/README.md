@@ -1,11 +1,11 @@
 # Photo review
 
-See the [repository README](../README.md) for setup, architecture, private configuration, and current limitations.
+See the [repository README](../README.md) for setup, private configuration, and limitations.
 
-The interface is a compact native HTML/CSS/JavaScript frontend served by Python's standard library. Review choices are atomically saved in `choices.json`; browser saves are queued. Exports contain provenance for selected candidates. Removal selections only record intent; they do not delete anything remotely. Existing exclusion decisions are not automatically converted into removal instructions.
+The local Python server reads current pinned-contact records and photos from Contacts+ on **Refresh from Contacts+**. Full records are fetched by source ID; a new contact match requires a unique exact email. Images are cached locally. Only current source photos appear in the review; historical originals remain on disk.
 
-Use `prepare.py` to import local candidates, then `refresh-presence.py` to reconcile them with current source photos. Preparation rebuilds the catalog from the original snapshot; reconcile again afterward before reviewing source removals. Neither operation deletes source data.
+Choices are saved locally until **Review changes for this contact** opens a preview and **Apply to Contacts+** is clicked. The preview includes the chosen primary and individual removals. The backend uses the tested photo-update CLI, with a fresh record/version check, backup, and readback verification of photos and other fields. Protected contacts cannot be changed, and the last photo cannot be removed. No Apple Contacts writes happen here.
 
-A separate supervised `remove-photos.py` CLI can apply an explicitly reviewed plan after write authorization. See the repository README for safeguards and usage. The browser does not invoke it. Source presence must use full `contacts.get` records; search results alone can omit photos.
+Confirmed changes update the local catalog atomically. The browser checks every three seconds, clears completed removal decisions, and shows the verified result. Failed or uncertain writes are not retried automatically. Refresh and apply operations are serialized. The server only binds to loopback and validates Host and Origin on mutations.
 
-After a successful removal readback, the CLI atomically publishes the confirmed result to the local catalog. The browser checks for catalog changes every three seconds, hides confirmed removals, and clears their pending decisions. Downloaded originals remain on disk. Failed or uncertain removals are not hidden. Reload an already-open older version once to enable this behavior.
+`prepare.py` is retained for importing older snapshots; it is not required for each refresh. Rebuilding from an old snapshot resets live review metadata, so refresh from Contacts+ afterward.

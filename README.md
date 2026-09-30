@@ -4,11 +4,11 @@ Local macOS tools for reviewing contact photos and testing photo-only updates wh
 
 ## Status
 
-- Local photo review: candidate comparison, enlargement, source-presence labels, persistent choices, JSON export, and pending removal decisions.
+- Local photo review: pinned contacts loaded directly from Contacts+, cached images, persistent choices, and reviewed photo updates.
 - Contacts+ OAuth: read/write authorization has been verified. Secrets stay in 1Password.
 - AppleScript: a single missing-photo update was saved and read back successfully; notes and related fields remained unchanged.
 - Swift Contacts framework prototype: reads succeed after app authorization, but the tested save failed with Cocoa error 134092. It is retained for investigation, not as the working sync path.
-- Contacts+ photo removal: a supervised single-contact test removed three historical photos, retained the current photo, and verified all other contact fields and metadata unchanged. Removal checkboxes still only queue decisions; the CLI applies an explicit reviewed plan. Automatic full sync and hourly scheduling are **not implemented/enabled**.
+- Contacts+ photo removal: a supervised single-contact test removed three historical photos, retained the current photo, and verified all other contact fields and metadata unchanged. The browser previews changes for one contact, then applies marked removals and the chosen primary photo through the backed-up CLI. Automatic full sync and hourly scheduling are **not implemented/enabled**.
 
 ## Start the review tool
 
@@ -18,7 +18,7 @@ Requires macOS and Python 3.10+ (standard library only). From this repository:
 python3 photo-review/server.py
 ```
 
-Open http://127.0.0.1:8766. The server binds only to loopback. It does not modify Contacts or Contacts+. The local `photo-review/public/data.json` and `public/images/` must already exist; neither is committed.
+Open http://127.0.0.1:8766. The server binds only to loopback. Refresh reads Contacts+. “Apply to Contacts+” writes only the photo changes shown in a separate confirmation preview. It does not write Apple Contacts. The local `photo-review/public/data.json` and `public/images/` must already exist; neither is committed.
 
 Copy `config.example.json` to `config.local.json` for a fresh setup. Configure 1Password item references and the review contact list locally. The existing installation already has this private configuration.
 
@@ -40,8 +40,16 @@ Python modules compile; AppleScript compiles without executing a contact write. 
 
 ## Supervised source-photo removal
 
-`photo-review/remove-photos.py --plan PATH` backs up and previews a private JSON plan. Add `--apply` to execute an explicitly reviewed plan with the write token. The plan contains `contactId`, the fresh record's `etag`, `keepUrls`, and `removeUrls`. Both URL lists must account for the entire current photo set, and at least one photo must remain. Plans and backups belong in ignored `outputs/`, never in Git.
+`photo-review/remove-photos.py --plan PATH` backs up and previews a private JSON plan. Add `--apply` to execute an explicitly reviewed plan with the write token. The plan contains `contactId`, the fresh record's `etag`, `keepUrls`, `removeUrls`, and optionally `primaryUrl`. Both URL lists must account for the entire current photo set, and at least one photo must remain. Plans and backups belong in ignored `outputs/`, never in Git.
 
-The tool fetches the full record, rejects stale plans, saves a backup, updates only the photo list using the existing contact data, then reads the record again to verify the remaining photos, other fields, and metadata. It does not retry uncertain writes automatically. Review `outputs/photo-removals/` if verification fails before taking any further action.
+The tool fetches the full record, rejects stale plans, saves a backup, updates only the photo list using the existing contact data (placing the chosen primary first), then reads the record again to verify the remaining photos, other fields, and metadata. It does not retry uncertain writes automatically. Review `outputs/photo-removals/` if verification fails before taking any further action.
 
 Run the removal safeguards with `python3 -m unittest discover -s tests`. OAuth token refresh and unattended access remain future work.
+
+## Direct Contacts+ review
+
+Click **Refresh from Contacts+** to fetch each configured pinned contact by its saved source ID. First-time matches require a unique exact email match. The tool uses full `contacts.get` records, downloads new images, and shows only photos currently attached in Contacts+. Existing previews are cached; historical originals are retained privately. Protected contacts remain unchanged.
+
+Select **Use as primary**, mark unwanted photos, then **Review changes for this contact**. The preview shows the primary photo and every removal. **Apply to Contacts+** commits that preview once, rejects stale records, backs up the contact, and verifies the photo order and other fields before updating the review. At least one photo must remain. Refresh and apply cannot run simultaneously in the server. All credentials remain in 1Password and are used only by the local backend; a 1Password prompt may still be necessary. Token refresh and unattended operation are not implemented.
+
+Contacts+ documents the first photo in the array as primary: https://www.contactsplus.com/developers/contacts-api/ . Primary selection is covered by local tests; a new live primary change requires the user's chosen photo and an explicit apply action in the tool.

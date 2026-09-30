@@ -10,21 +10,26 @@ def replacement(current,plan):
     photos=current['contactData'].get('photos',[])
     urls=[p['value'] for p in photos]
     remove=plan['removeUrls'];keep=plan['keepUrls']
-    if not remove or len(set(remove))!=len(remove) or set(remove)&set(keep):raise ValueError('Invalid removal plan')
+    if (not remove and not plan.get('primaryUrl')) or len(set(remove))!=len(remove) or set(remove)&set(keep):raise ValueError('Invalid removal plan')
     if set(urls)!=set(remove)|set(keep) or not keep:raise ValueError('Photo set differs or no photo would remain')
     data=copy.deepcopy(current['contactData']);data['photos']=[p for p in photos if p['value'] not in remove]
+    if plan.get('primaryUrl'):
+        if plan['primaryUrl'] not in keep:raise ValueError('Primary photo must be retained')
+        data['photos'].sort(key=lambda p:p['value']!=plan['primaryUrl'])
     return data
 
 def publish_verified_removal(catalog_path, after, plan):
     """Publish only confirmed absences; keep downloaded history on disk."""
     actual={p['value'] for p in after['contactData'].get('photos',[])}
-    if after['contactId']!=plan['contactId'] or actual!=set(plan['keepUrls']) or actual&set(plan['removeUrls']):
+    if after['contactId']!=plan['contactId'] or actual!=set(plan['keepUrls']) or actual&set(plan['removeUrls']) or (plan.get('primaryUrl') and after['contactData']['photos'][0]['value']!=plan['primaryUrl']):
         raise ValueError('Removal has not been verified')
     catalog=json.loads(catalog_path.read_text())
     checked=datetime.datetime.now(datetime.timezone.utc).isoformat()
     for contact in catalog['contacts']:
         if contact.get('liveContactId')!=after['contactId']:continue
         contact['livePhotoCount']=len(actual);contact['checkedAt']=checked
+        contact['liveEtag']=after.get('etag');contact['primaryUrl']=after['contactData']['photos'][0]['value']
+        contact['lastAppliedAt']=checked
         for photo in contact['candidates']:
             url=photo.get('sourceUrl')
             if url in plan['removeUrls']:
