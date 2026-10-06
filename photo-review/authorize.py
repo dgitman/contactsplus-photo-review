@@ -10,8 +10,11 @@ CONFIG = json.loads((ROOT.parent/'config.local.json').read_text())
 REDIRECT = 'http://127.0.0.1:8765/oauth/callback'
 parser=argparse.ArgumentParser()
 parser.add_argument('--write',action='store_true',help='Request contact write access for reviewed photo removals')
+parser.add_argument('--all-scopes',action='store_true',help='Request all documented Contacts+ account, contact, tag, and team scopes')
 args=parser.parse_args()
 SCOPE='contacts.read,contacts.write' if args.write else 'contacts.read'
+if args.all_scopes:
+    SCOPE='account.read,contacts.read,contacts.write,tags.read,tags.write,teams.read,teams.contacts.read,teams.contacts.write,teams.tags.read,teams.tags.write'
 state = secrets.token_urlsafe(32)
 item = json.loads(subprocess.check_output(['op','item','get',CONFIG['client_item'],'--format','json']))
 fields = {f.get('label'):f.get('value') for f in item['fields']}
@@ -45,7 +48,7 @@ class Handler(BaseHTTPRequestHandler):
             req=Request('https://api.contactsplus.com/v3/oauth.exchangeAuthCode',data=form,headers={'Content-Type':'application/x-www-form-urlencoded'})
             with urlopen(req,timeout=30) as r: tokens=json.load(r)
             if not tokens.get('access_token') or not tokens.get('refresh_token'):raise ValueError('Missing tokens')
-            record={'title':'Contacts+ Photo Review OAuth'+(' Write' if args.write else ''),'category':'API_CREDENTIAL','vault':{'id':item['vault']['id']},'fields':[{'id':'credential','type':'CONCEALED','label':'credential','value':tokens['access_token']},{'id':'refresh_token','type':'CONCEALED','label':'refresh_token','value':tokens['refresh_token']},{'id':'client_item','type':'STRING','label':'client_item','value':item['id']},{'id':'redirect_uri','type':'STRING','label':'redirect_uri','value':REDIRECT},{'id':'scope','type':'STRING','label':'scope','value':tokens.get('scope',SCOPE)}]}
+            record={'title':'Contacts+ Photo Review OAuth'+(' All Scopes' if args.all_scopes else ' Write' if args.write else ''),'category':'API_CREDENTIAL','vault':{'id':item['vault']['id']},'fields':[{'id':'credential','type':'CONCEALED','label':'credential','value':tokens['access_token']},{'id':'refresh_token','type':'CONCEALED','label':'refresh_token','value':tokens['refresh_token']},{'id':'client_item','type':'STRING','label':'client_item','value':item['id']},{'id':'redirect_uri','type':'STRING','label':'redirect_uri','value':REDIRECT},{'id':'scope','type':'STRING','label':'scope','value':tokens.get('scope',SCOPE)}]}
             result=subprocess.run(['op','item','create','--format','json'],input=json.dumps(record),text=True,capture_output=True,timeout=120)
             if result.returncode:raise ValueError('Secure storage failed')
             saved=json.loads(result.stdout)
